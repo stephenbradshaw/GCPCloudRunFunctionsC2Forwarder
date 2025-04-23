@@ -49,7 +49,14 @@ gcloud services enable cloudbuild.googleapis.com
 
 Deploy the application, using this repository as the present working directory
 
-There are two different ways to approach this. The first is the `gcloud functions` deployment approach which requires the Serverless VPC connector and gives access to an additional endpoint where the app can be accessed.
+There are two different ways to approach deployment, which each have their own benefits and drawbacks. 
+1. The `gcloud functions` approach which deploys your app so its accessible from three different auto created URLs instad of only two, but requires a Serverless VPC connector (with associated running cost) to allow private VPC connection to a C2 running on a GCP compute instance
+2. The `gcloud run` approach which does not require the Serverless VPC connector, but only provides access to the app via two auto created URLs, excluding the `cloudfunctions.net` domain URL available when using the first approach
+
+
+## Gcloud functions deployment approach
+
+This approach requires the Serverless VPC connector to work but gives access to an additional endpoint where the app can be accessed.
 
 ```
 gcloud functions deploy <SERVICE_NAME> --source . --entry-point main --region <REGION> --runtime python312 --set-env-vars='DESTINATION=<C2_INTERNAL_IP>' --trigger-http --allow-unauthenticated --vpc-connector 'projects/<PROJECT_ID>/locations/<REGION>/connectors/<CONNECTOR_NAME>'
@@ -59,7 +66,9 @@ gcloud functions deploy <SERVICE_NAME> --source . --entry-point main --region <R
 Once complete this will spit out a URL at which your C2 service can be reached, with a form similar to the following: `https://<REGION>-<PROJECT_ID>.cloudfunctions.net/<SERVICE_NAME>`. Two additional alternate URLs from which the app can also be reached will also be auto configured, discussed below and viewable from the Network tab of the [GCP Cloud Run console](https://console.cloud.google.com/run).
 
 
-The second is the `gcloud run` deployment approach. This does not require the Serverless VPC connector and instead uses the [Direct VPC egress](https://cloud.google.com/run/docs/configuring/vpc-direct-vpc) to run the app inside an existing VPC subnet. This saves you some money and complexity but you lose acess to the `cloudfunctions.net` address for the app, and instead only have acces to the two alternate address forms.
+## Gcloud run deployment approach
+
+This approach does not require the Serverless VPC connector and instead uses the [Direct VPC egress](https://cloud.google.com/run/docs/configuring/vpc-direct-vpc) to run the app inside an existing VPC subnet. This saves you some money and complexity but you lose acess to the `cloudfunctions.net` address for the app, and instead only have acces to the two alternate address forms.
 
 ```
 gcloud run deploy <SERVICE_NAME> --source . --function main --set-env-vars='DESTINATION=<C2_INTERNAL_IP>' --region=<REGION> --allow-unauthenticated --subnet='projects/<PROJECT_ID>/regions/<REGION>/subnetworks/<SUBNET_NAME>' 
@@ -68,7 +77,7 @@ gcloud run deploy <SERVICE_NAME> --source . --function main --set-env-vars='DEST
 The `--subnet` switch value above refers to the internal resource name of the subnet to which you want to attach your Cloud Run container, you should confirm it is referring to the correct resource using the [GCP subnets page](https://console.cloud.google.com/networking/networks/list?pageTab=CURRENT_PROJECT_SUBNETS) if you have any issues.
 
 
-Once complete this will spit out a URL at which your C2 service can be reached, with a form similar to the following: `https://<SERVICE_NAME>-<12_DIGIT_NUMBER>.<REGION>.run.app`. This form of URL will also be available when using the `gcloud functions` deployment approach.
+Once complete this will spit out a URL at which your C2 service can be reached, with a form similar to the following: `https://<SERVICE_NAME>-<12_DIGIT_NUMBER>.<REGION>.run.app/`. This form of URL will also be available when using the `gcloud functions` deployment approach.
 
 Both approaches will also have access to the app at a shorter form version of the URL in a format similar to the following: `https://<SERVICE_NAME>-<10_CHAR_STRING>-<REGION-ID>.a.run.app/`
 
